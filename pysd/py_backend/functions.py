@@ -161,6 +161,8 @@ class Integ(Stateful):
         else:
             self._state = new_value
 
+    def __reduce__(self):
+        return (self.__class__, (self.ddt, self.init_func))
 
 class Delay(Stateful):
     # note that we could have put the `delay_input` argument as a parameter to
@@ -204,6 +206,8 @@ class Delay(Stateful):
         inflows[0] = self.input_func()
         return inflows - outflows
 
+    def __reduce__(self):
+        return (self.__class__, (self.input_func, self.delay_time_func, self.init_func, self.order_func))
 
 class Smooth(Stateful):
     def __init__(self, smooth_input, smooth_time, initial_value, order):
@@ -226,6 +230,9 @@ class Smooth(Stateful):
         targets[0] = self.input_func()
         return (targets - self.state) * self.order / self.smooth_time_func()
 
+    def __reduce__(self):
+        return (self.__class__, (self.input_func, self.smooth_time_func, self.init_func, self.order_func))
+
 
 class Trend(Stateful):
     def __init__(self, trend_input, average_time, initial_trend):
@@ -243,6 +250,8 @@ class Trend(Stateful):
     def ddt(self):
         return (self.input_func() - self.state) / self.average_time_function()
 
+    def __reduce__(self):
+        return (self.__class__, (self.input_func, self.average_time_function, self.init_func))
 
 class Initial(Stateful):
     def __init__(self, func):
@@ -258,6 +267,9 @@ class Initial(Stateful):
     def update(self, state):
         # this doesn't change once it's set up.
         pass
+ 
+    def __reduce__(self):
+        return (self.__class__, (self.func,))
 
 
 class Macro(Stateful):
@@ -270,7 +282,7 @@ class Macro(Stateful):
     execution.
     """
 
-    def __init__(self, py_model_file, params=None, return_func=None):
+    def __init__(self, py_model_file, params=None, return_func=None, components=None):
         """
         The model object will be created with components drawn from a translated python
         model file.
@@ -290,8 +302,12 @@ class Macro(Stateful):
 
         # need a unique identifier for the imported module.
         module_name = os.path.splitext(py_model_file)[0] + str(random.randint(0, 1000000))
-        self.components = imp.load_source(module_name,
+        
+        if components == None:
+            self.components = imp.load_source(module_name,
                                           py_model_file)
+        else:
+            self.components = components
 
         if params is not None:
             self.set_components(params)
@@ -305,6 +321,9 @@ class Macro(Stateful):
             self.return_func = lambda: 0
 
         self.py_model_file = py_model_file
+
+    def __reduce__(self):
+        return (self.__class__, (self._py_model_file, None, self.return_func, self.components))
 
     def __call__(self):
         return self.return_func()
@@ -505,11 +524,15 @@ class Time(object):
     def update(self, value):
         self._t = value
 
+    def __reduce__(self):
+        return (self.__class__, ())
+
 
 class Model(Macro):
-    def __init__(self, py_model_file):
+    def __init__(self, py_model_file, components=None):
         """ Sets up the python objects """
-        super(Model, self).__init__(py_model_file, None, None)
+        super(Model, self).__init__(py_model_file, None, None, components)
+        self._py_model_file = py_model_file
         self.time = Time()
         self.time.stage = 'Load'
         self.initialize()
@@ -765,6 +788,9 @@ class Model(Macro):
             outputs.append({key: getattr(self.components, key)() for key in capture_elements})
 
         return outputs
+    
+    def __reduce__(self):
+        return (self.__class__, (self._py_model_file, self.components))
 
 
 def ramp(slope, start, finish=0):
