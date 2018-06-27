@@ -102,7 +102,7 @@ def cache(horizon):
         raise (AttributeError('Bad horizon for cache decorator'))
 
 
-class Stateful(object):
+class Stateful():
     # the integrator needs to be able to 'get' the current state of the object,
     # and get the derivative. It calculates the new state, and updates it. The state
     # can be any object which is subject to basic (element-wise) algebraic operations
@@ -128,6 +128,8 @@ class Stateful(object):
     def update(self, state):
         self.state = state
 
+    def __reduce__(self):
+        return (self.__class__, ())
 
 class Integ(Stateful):
     def __init__(self, ddt, initial_value):
