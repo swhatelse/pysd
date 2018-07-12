@@ -222,7 +222,7 @@ class Smooth(Stateful):
         return self.state[-1]
 
     def ddt(self):
-        targets = list(map(np.float64, np.roll(self.state, 1)))
+        targets = np.array(np.roll(self.state, 1))
         targets[0] = self.input_func()
         return (targets - self.state) * self.order / self.smooth_time_func()
 
@@ -708,6 +708,7 @@ class Model(Macro):
 
         if isinstance(initial_condition, tuple):
             # Todo: check the values more than just seeing if they are a tuple.
+            self.initialize()
             self.set_state(*initial_condition)
         elif isinstance(initial_condition, str):
             if initial_condition.lower() in ['original', 'o']:
