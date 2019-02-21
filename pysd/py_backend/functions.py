@@ -909,7 +909,10 @@ def lookup_discrete(x, xs, ys):
 
 
 def if_then_else(condition, val_if_true, val_if_false):
-    return np.where(condition, val_if_true, val_if_false)
+    if condition:
+        return val_if_true
+    else:
+        return val_if_false
 
 
 def xidz(numerator, denominator, value_if_denom_is_zero):
